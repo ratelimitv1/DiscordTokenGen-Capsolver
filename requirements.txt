@@ -1,0 +1,10 @@
+requests
+colorama
+pystyle
+keyboard
+nodriver
+notify-py
+urllib3
+pygetwindow
+pyautogui
+easycaptchas

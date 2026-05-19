@@ -1,0 +1,17 @@
+{
+  "check_ratelimit": true,
+  "vpn_mode_delay": 1,
+  "notify": false,
+  "notification_icon": "data/pack.ico",
+  "browser": "brave",
+  "hotmail007_key": "c76bcd9d49134ac1a7d587c9caedeeba086119",
+  "discord_account_password": "kanishkalwaysontop",
+  "number_attacher": false,
+  "delay_when_no_ratelimit": 5,
+
+  "use_proxy": false,
+  "proxy_file": "proxies.txt",
+  "proxies": [
+    
+  ]
+}
