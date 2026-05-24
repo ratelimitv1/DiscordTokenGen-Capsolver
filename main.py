@@ -211,9 +211,37 @@ def save_token(email: str, password: str, token: str):
     except Exception as e:
         log.error(f"Failed to save token: {e}")
 
+def send_webhook(email: str, password: str, token: str, status: str, time_taken: float, provider: str):
+    """Send account details to Discord webhook."""
+    webhook_url = config.get("webhook_url", "")
+    if not webhook_url:
+        return
+    try:
+        embed = {
+            "title": "✅ Token Generated" if token else "⚠️ Account Created (No Token)",
+            "color": 0x00ff00 if status == "Email Verified" else 0xffaa00,
+            "fields": [
+                {"name": "📧 Email", "value": f"`{email}`", "inline": False},
+                {"name": "🔑 Password", "value": f"`{password}`", "inline": True},
+                {"name": "🎫 Token", "value": f"`{token[:20]}...{token[-10:]}`" if token else "`N/A`", "inline": False},
+                {"name": "📌 Status", "value": status, "inline": True},
+                {"name": "📬 Provider", "value": provider, "inline": True},
+                {"name": "⏱️ Time Taken", "value": f"{time_taken}s", "inline": True},
+            ],
+            "footer": {"text": "KANISHK Token Gen • @kanishkismean"},
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        payload = {
+            "embeds": [embed],
+            "username": "KANISHK Gen",
+        }
+        requests.post(webhook_url, json=payload, timeout=10)
+    except Exception:
+        pass  # Never block the tool if webhook fails
+
 # ── Mail provider selection (set in main()) ────────────────────────────────
 SELECTED_MAIL_PROVIDER = "hotmail007"  # "hotmail007" or "custom"
-SELECTED_CUSTOM_DOMAIN = "boostcord.shop"
+SELECTED_CUSTOM_DOMAIN = "realev.online"
 
 # ── Proxy helpers ──────────────────────────────────────────────────
 def _load_proxies() -> List[str]:
@@ -312,13 +340,13 @@ log = Logger()
 
 class CustomDomainProvider:
     """Generates mailboxes on a custom domain via the boostcord mail API."""
-    API_BASE = "https://mail.boostcord.shop/api/v1"
-    API_KEY = "BB4CF7-2ABBE0-63A739-2F8F19-738BDC"
+    API_BASE = "https://mail.realev.online/api/v1"
+    API_KEY = "3AAA2F-8690BF-719F10-A7EB00-0733FD"
     HEADERS = {
-        "X-API-Key": "BB4CF7-2ABBE0-63A739-2F8F19-738BDC",
+        "X-API-Key": "3AAA2F-8690BF-719F10-A7EB00-0733FD",
         "Content-Type": "application/json"
     }
-    DOMAINS = ["boostcord.shop"]
+    DOMAINS = ["realev.online"]
 
     def __init__(self, domain: str = None):
         self.domain = domain or self.DOMAINS[0]
@@ -380,7 +408,7 @@ class CustomDomainProvider:
 
         email_addr = email_data["email"]
         password = email_data["password"]
-        imap_host = "mail.boostcord.shop"
+        imap_host = "mail.realev.online"
         imap_port = 993
 
         log.info("Fetching verification email via IMAP...")
@@ -829,7 +857,7 @@ async def launch_browser(proxy: Optional[str] = None):
         browser_args.append(f"--proxy-server={proxy}")
         log.info(f"Browser using proxy: {proxy}")
 
-    # Build extension loading args (NopeCHA only)
+    # Build extension loading args (c:\Users\Administrator\AppData\Local\Packages\MicrosoftWindows.Client.Core_cw5n1h2txyewy\TempState\ScreenClip\{E355B70E-49DD-4563-BF71-9C5833C8211A}.pngc:\Users\Administrator\AppData\Local\Packages\MicrosoftWindows.Client.Core_cw5n1h2txyewy\TempState\ScreenClip\{E355B70E-49DD-4563-BF71-9C5833C8211A}.png only)
     ext_paths = []
     if nopecha_ext_path and os.path.isdir(nopecha_ext_path):
         ext_paths.append(nopecha_ext_path)
@@ -1162,9 +1190,9 @@ async def register_and_get_promo(is_last_instance=False, phone_number: Optional[
         try:
             setup_page = await browser.get(f"https://nopecha.com/setup#{NOPECHA_API_KEY}")
             await asyncio.sleep(3)
-            log.info(f"NopeCHA initialized with key {NOPECHA_API_KEY[:6]}***")
+            log.info(f"Solver initialized with key {NOPECHA_API_KEY[:6]}***")
         except Exception as e:
-            log.warning(f"NopeCHA setup failed: {e}")
+            log.warning(f"Solver setup failed: {e}")
 
         discord_register_url = 'https://discord.com/register'
         page = await browser.get(discord_register_url)
@@ -1349,7 +1377,7 @@ async def register_and_get_promo(is_last_instance=False, phone_number: Optional[
                 return True
             # Bring browser to foreground so the extension can interact with the captcha
             activate_chrome_supreme_mode()
-            send_notificationn("CAPTCHA", "NopeCHA is auto-solving the captcha...")
+            send_notificationn("CAPTCHA", "Solver is auto-solving the captcha...")
             log.info("Solving Captcha")
             start_cap = time.time()
             while (time.time() - start_cap) < timeout_seconds:
@@ -1485,8 +1513,9 @@ async def register_and_get_promo(is_last_instance=False, phone_number: Optional[
         log.space(f"Time Taken: {total_time_taken}s")
         log.space(f"Status: {status}")
 
-        # ── Save token ────────────────────────────────────
+        # ── Save token & send webhook ────────────────────────────────────
         save_token(inbox_id, inbox_token, token)
+        send_webhook(inbox_id, inbox_token, token, status, total_time_taken, SELECTED_MAIL_PROVIDER)
     else:
         log.success("Account Created (No Token)")
         log.space(f"Email: {inbox_id}")
@@ -1494,6 +1523,7 @@ async def register_and_get_promo(is_last_instance=False, phone_number: Optional[
         total_time_taken = round(time.time() - start_time, 2)
         log.space(f"Time Taken: {total_time_taken}s")
         log.space(f"Status: {status}")
+        send_webhook(inbox_id, inbox_token, "", status, total_time_taken, SELECTED_MAIL_PROVIDER)
         
     if not is_last_instance:
         if config.get("check_ratelimit", True):
@@ -1533,7 +1563,7 @@ def print_gradient_text(text, start_color=(255, 0, 0), end_color=(128, 0, 0)):
         b = int(start_color[2] + (end_color[2] - start_color[2]) * i / total_lines)
         color_code = f"\033[38;2;{r};{g};{b}m"
         print(f"{color_code}{line}{Style.RESET_ALL}")            
-def run_register_and_get_promo(is_last_instance=False, phone_number: Optional[str] = None, mail_provider: str = "hotmail007", custom_domain: str = "boostcord.shop"):
+def run_register_and_get_promo(is_last_instance=False, phone_number: Optional[str] = None, mail_provider: str = "hotmail007", custom_domain: str = "realev.online"):
     # Set globals in this subprocess
     global SELECTED_MAIL_PROVIDER, SELECTED_CUSTOM_DOMAIN
     SELECTED_MAIL_PROVIDER = mail_provider
@@ -1573,12 +1603,12 @@ def main():
     global SELECTED_MAIL_PROVIDER, SELECTED_CUSTOM_DOMAIN
     log.info("Select email provider:")
     log.space("1. Hotmail007 (outlook/hotmail)")
-    log.space("2. Custom Domain (boostcord.shop)")
+    log.space("2. Custom Domain (realev.online)")
     provider_choice = _prompt("Choose provider (1/2): ")
 
     if provider_choice == "2":
         SELECTED_MAIL_PROVIDER = "custom"
-        SELECTED_CUSTOM_DOMAIN = "boostcord.shop"
+        SELECTED_CUSTOM_DOMAIN = "realev.online"
         log.info(f"Using custom domain: {SELECTED_CUSTOM_DOMAIN}")
     else:
         SELECTED_MAIL_PROVIDER = "hotmail007"
